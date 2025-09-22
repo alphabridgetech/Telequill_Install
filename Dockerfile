@@ -8,6 +8,8 @@ ARG SYSLOGNG_VERSION="4.8.3-r1"
 FROM crazymax/yasu:latest AS yasu
 FROM crazymax/alpine-s6:${ALPINE_VERSION}-2.2.0.3
 COPY --from=yasu / /
+
+# Install all dependencies + Ansible
 RUN apk --update --no-cache add \
     busybox-extras \
     acl \
@@ -82,7 +84,7 @@ RUN apk --update --no-cache add \
     musl-dev \
     python3-dev \
   && pip3 install --upgrade --break-system-packages pip \
-  && pip3 install python-memcached mysqlclient --upgrade --break-system-packages \
+  && pip3 install python-memcached mysqlclient ansible --upgrade --break-system-packages \
   && curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
   && apk del build-dependencies \
   && rm -rf /var/www/* /tmp/* \
