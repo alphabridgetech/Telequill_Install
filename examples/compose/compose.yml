@@ -18,6 +18,8 @@ services:
       - "MYSQL_DATABASE=${MYSQL_DATABASE}"
       - "MYSQL_USER=${MYSQL_USER}"
       - "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+    ports:
+      - "3307:3306"
     restart: always
 
   redis:
@@ -65,6 +67,14 @@ services:
       - "DB_USER=${MYSQL_USER}"
       - "DB_PASSWORD=${MYSQL_PASSWORD}"
       - "DB_TIMEOUT=60"
+    command: >
+      sh -c "
+        echo '🔧 Fixing folder permissions...' &&
+        chown -R librenms:librenms /data &&
+        chmod -R 775 /data &&
+        echo '✅ Permissions fixed. Starting LibreNMS...' &&
+        /init
+      "
     restart: always
 
   dispatcher:
@@ -95,6 +105,14 @@ services:
       - "DB_TIMEOUT=60"
       - "DISPATCHER_NODE_ID=dispatcher1"
       - "SIDECAR_DISPATCHER=1"
+    command: >
+      sh -c "
+        echo '🔧 Fixing folder permissions...' &&
+        chown -R librenms:librenms /data &&
+        chmod -R 775 /data &&
+        echo '✅ Permissions fixed. Starting LibreNMS...' &&
+        /init
+      "
     restart: always
 
   syslogng:
@@ -167,4 +185,13 @@ services:
       - "DB_PASSWORD=${MYSQL_PASSWORD}"
       - "DB_TIMEOUT=60"
       - "SIDECAR_SNMPTRAPD=1"
+    command: >
+      sh -c "
+        echo '🔧 Fixing folder permissions...' &&
+        chown -R librenms:librenms /data &&
+        chmod -R 775 /data &&
+        echo '✅ Permissions fixed. Starting LibreNMS...' &&
+        /init
+      "
+
     restart: always
