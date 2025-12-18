@@ -91,6 +91,13 @@ RUN apk --update --no-cache add \
   && apk del build-dependencies
 
 # -------------------------------------------------
+# ✅ INSTALL COMPOSER (FIX)
+# -------------------------------------------------
+RUN curl -sS https://getcomposer.org/installer | php -- \
+    --install-dir=/usr/local/bin \
+    --filename=composer
+
+# -------------------------------------------------
 # Syslog-ng
 # -------------------------------------------------
 ARG SYSLOGNG_VERSION
@@ -127,7 +134,7 @@ RUN apk --update --no-cache add -t build-dependencies \
     python3-dev \
   && git clone --branch ${LIBRENMS_VERSION} --single-branch https://github.com/alphabridgetech/librenms.git . \
   && pip3 install --ignore-installed -r requirements.txt --upgrade --break-system-packages \
-  && COMPOSER_CACHE_DIR="/tmp" composer install --no-dev --no-interaction --no-ansi \
+  && composer install --no-dev --no-interaction --no-ansi \
   && mkdir -p config.d \
   && cp config.php.default config.php \
   && cp snmpd.conf.example /etc/snmp/snmpd.conf \
@@ -137,7 +144,7 @@ RUN apk --update --no-cache add -t build-dependencies \
   && chown -R nobody:nogroup ${LIBRENMS_PATH}
 
 # -------------------------------------------------
-# 🔥 Paramiko install AFTER LibreNMS clone
+# 🔥 Paramiko AFTER LibreNMS clone
 # -------------------------------------------------
 RUN python3 -m venv /opt/librenms/librenms-ansible-inventory-plugin \
  && /opt/librenms/librenms-ansible-inventory-plugin/bin/pip install --upgrade pip setuptools wheel \
