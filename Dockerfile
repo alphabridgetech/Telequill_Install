@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
 
-# renovate: datasource=github-releases packageName=librenms/librenms versioning=semver
 ARG LIBRENMS_VERSION="Dev"
 ARG ALPINE_VERSION="3.22"
 ARG SYSLOGNG_VERSION="4.8.3-r1"
@@ -9,7 +8,9 @@ FROM crazymax/yasu:latest AS yasu
 FROM crazymax/alpine-s6:${ALPINE_VERSION}-2.2.0.3
 COPY --from=yasu / /
 
-# Install all dependencies + Ansible
+# -------------------------------------------------
+# Base packages + Ansible
+# -------------------------------------------------
 RUN apk --update --no-cache add \
     busybox-extras \
     acl \
@@ -83,26 +84,28 @@ RUN apk --update --no-cache add \
     mariadb-dev \
     musl-dev \
     python3-dev \
-  && pip3 install --upgrade --break-system-packages pip \
-  && pip3 install python-memcached mysqlclient ansible --upgrade --break-system-packages \
-  && curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
-  && apk del build-dependencies \
-  && rm -rf /var/www/* /tmp/* \
-  && echo "/usr/sbin/fping -6 \$@" > /usr/sbin/fping6 \
-  && chmod +x /usr/sbin/fping6 \
-  && chmod u+s,g+s \
-    /bin/ping \
-    /bin/ping6 \
-    /usr/lib/monitoring-plugins/check_icmp \
-  && setcap cap_net_raw+ep /usr/bin/nmap \
-  && setcap cap_net_raw+ep /usr/sbin/fping \
-  && setcap cap_net_raw+ep /usr/sbin/fping6 \
-  && setcap cap_net_raw+ep /usr/lib/monitoring-plugins/check_icmp \
-  && setcap cap_net_raw+ep /usr/lib/monitoring-plugins/check_ping
+    libffi-dev \
+    openssl-dev \
+  && pip3 install --upgrade pip setuptools wheel --break-system-packages \
+  && pip3 install ansible mysqlclient python-memcached --break-system-packages \
+  && apk del build-dependencies
 
+# -------------------------------------------------
+# ✅ INSTALL COMPOSER (FIX)
+# -------------------------------------------------
+RUN curl -sS https://getcomposer.org/installer | php -- \
+    --install-dir=/usr/local/bin \
+    --filename=composer
+
+# -------------------------------------------------
+# Syslog-ng
+# -------------------------------------------------
 ARG SYSLOGNG_VERSION
 RUN apk --update --no-cache add syslog-ng=${SYSLOGNG_VERSION}
 
+# -------------------------------------------------
+# ENV
+# -------------------------------------------------
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS="2" \
   LIBRENMS_PATH="/opt/librenms" \
   LIBRENMS_DOCKER="1" \
@@ -110,37 +113,47 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS="2" \
   PUID="1000" \
   PGID="1000"
 
+# -------------------------------------------------
+# User setup
+# -------------------------------------------------
 RUN addgroup -g ${PGID} librenms \
-  && adduser -D -h /home/librenms -u ${PUID} -G librenms -s /bin/sh -D librenms \
-  && curl -sSLk -q https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro -o /usr/bin/distro \
+  && adduser -D -h /home/librenms -u ${PUID} -G librenms -s /bin/sh librenms \
+  && curl -sSLk https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro -o /usr/bin/distro \
   && chmod +x /usr/bin/distro
 
+# -------------------------------------------------
+# LibreNMS clone
+# -------------------------------------------------
 WORKDIR ${LIBRENMS_PATH}
 ARG LIBRENMS_VERSION
-ARG WEATHERMAP_PLUGIN_COMMIT
+
 RUN apk --update --no-cache add -t build-dependencies \
     build-base \
     linux-headers \
     musl-dev \
     python3-dev \
-  && echo "Installing LibreNMS https://github.com/alphabridgetech/librenms.git#${LIBRENMS_VERSION}..." \
-  && git clone --branch Dev --single-branch https://github.com/alphabridgetech/librenms.git . \
+  && git clone --branch ${LIBRENMS_VERSION} --single-branch https://github.com/alphabridgetech/librenms.git . \
   && pip3 install --ignore-installed -r requirements.txt --upgrade --break-system-packages \
-  && COMPOSER_CACHE_DIR="/tmp" composer install --no-dev --no-interaction --no-ansi \
+  && composer install --no-dev --no-interaction --no-ansi \
   && mkdir -p config.d \
-  && cp config.php.default config.php \
   && cp config.php.default config.php \
   && cp snmpd.conf.example /etc/snmp/snmpd.conf \
   && sed -i '/runningUser/d' lnms \
-  && echo "foreach (glob(\"/data/config/*.php\") as \$filename) include \$filename;" >> config.php \
-  && echo "foreach (glob(\"${LIBRENMS_PATH}/config.d/*.php\") as \$filename) include \$filename;" >> config.php \
-  && chown -R nobody:nogroup ${LIBRENMS_PATH} \
-  && apk del build-dependencies \
-  && rm -rf \
-    html/plugins/Test \
-    doc/ \
-    tests/ \
-    /tmp/*
+  && echo 'foreach (glob("/data/config/*.php") as $filename) include $filename;' >> config.php \
+  && echo 'foreach (glob("/opt/librenms/config.d/*.php") as $filename) include $filename;' >> config.php \
+  && chown -R nobody:nogroup ${LIBRENMS_PATH}
+
+# -------------------------------------------------
+# 🔥 Paramiko AFTER LibreNMS clone
+# -------------------------------------------------
+RUN python3 -m venv /opt/librenms/librenms-ansible-inventory-plugin \
+ && /opt/librenms/librenms-ansible-inventory-plugin/bin/pip install --upgrade pip setuptools wheel \
+ && /opt/librenms/librenms-ansible-inventory-plugin/bin/pip install paramiko \
+ && apk del build-dependencies \
+ && rm -rf /tmp/* tests/ doc/
+
+# Force ansible to use venv python
+ENV ANSIBLE_PYTHON_INTERPRETER=/opt/librenms/librenms-ansible-inventory-plugin/bin/python
 
 COPY rootfs /
 
