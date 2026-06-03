@@ -77,6 +77,7 @@ RUN apk --update --no-cache add \
     tzdata \
     util-linux \
     whois \
+    eudev-libs \
     syslog-ng=${SYSLOGNG_VERSION} \
     php83-pecl-yaml \
   && apk --update --no-cache add -t build-dependencies \
