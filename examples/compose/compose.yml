@@ -3,7 +3,7 @@ name: librenms
 services:
   db:
     image: mariadb:10
-    container_name: librenms_db
+    container_name: telequill_db
     command:
       - "mysqld"
       - "--innodb-file-per-table=1"
@@ -25,14 +25,14 @@ services:
 
   redis:
     image: redis:7.2-alpine
-    container_name: librenms_redis
+    container_name: telequill_redis
     environment:
       - "TZ=${TZ}"
     restart: always
 
   msmtpd:
     image: crazymax/msmtpd:latest
-    container_name: librenms_msmtpd
+    container_name: telequill_msmtpd
     env_file:
       - "./msmtpd.env"
     restart: always
@@ -42,7 +42,7 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: my-librenms:latest
-    container_name: librenms
+    container_name: telequill
     hostname: librenms
     cap_add:
       - NET_ADMIN
@@ -76,7 +76,7 @@ services:
     build:
       context: ../../
       dockerfile: Dockerfile
-    container_name: librenms_dispatcher
+    container_name: telequill_dispatcher
     hostname: librenms-dispatcher
     cap_add:
       - NET_ADMIN
@@ -106,7 +106,7 @@ services:
     build:
       context: ../../
       dockerfile: Dockerfile
-    container_name: librenms_syslogng
+    container_name: telequill_syslogng
     hostname: librenms-syslogng
     cap_add:
       - NET_ADMIN
@@ -142,7 +142,7 @@ services:
     build:
       context: ../../
       dockerfile: Dockerfile
-    container_name: librenms_snmptrapd
+    container_name: telequill_snmptrapd
     hostname: librenms-snmptrapd
     cap_add:
       - NET_ADMIN
