@@ -124,7 +124,7 @@ RUN apk --update --no-cache add -t build-dependencies \
     linux-headers \
     musl-dev \
     python3-dev \
-  && echo "Installing LibreNMS https://github.com/alphabridgetech/librenms.git#${LIBRENMS_VERSION}..." \
+  && echo "Installing Telequill https://github.com/alphabridgetech/librenms.git#${LIBRENMS_VERSION}..." \
   && git config --global http.version HTTP/1.1 \
   && for i in 1 2 3 4 5; do git clone --branch Dev --single-branch https://github.com/alphabridgetech/librenms.git . && break || sleep 3; done \
   && git config --global --unset http.version \
