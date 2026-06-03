@@ -146,7 +146,7 @@ RUN apk --update --no-cache add -t build-dependencies \
     /tmp/* \
   && python3 -m venv /opt/librenms/librenms-ansible-inventory-plugin \
   && . /opt/librenms/librenms-ansible-inventory-plugin/bin/activate \
-  && pip3 install paramiko
+  && pip3 install paramiko==3.2.0
 
 COPY rootfs /
 
